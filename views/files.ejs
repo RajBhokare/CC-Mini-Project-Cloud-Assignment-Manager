@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Assignment Manager - My Files</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+        </div>
+        <span>Cloud Assignment Manager</span>
+      </a>
+      
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+      
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/" class="nav-link">Dashboard</a></li>
+        <li><a href="/assignments" class="nav-link">Assignments</a></li>
+        <li><a href="/upload" class="nav-link">Upload</a></li>
+        <li><a href="/files" class="nav-link active">My Files</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    
+    <!-- Page Header -->
+    <header class="page-header">
+      <h1 class="page-title">My Submitted Files</h1>
+      <p class="page-subtitle">Track and retrieve all your assignment documents stored across local & cloud storage</p>
+    </header>
+
+    <!-- Success Flash Alert -->
+    <% if (uploadSuccess) { %>
+      <div class="alert alert-success">
+        <div class="alert-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div>
+            <strong>Upload Successful!</strong>
+            <span><%= uploadedFileName ? ` "${uploadedFileName}" has been submitted.` : 'Your file has been submitted successfully.' %></span>
+          </div>
+        </div>
+        <button class="alert-close">&times;</button>
+      </div>
+    <% } %>
+
+    <!-- Files Table Card -->
+    <div class="card-table-container">
+      <div class="table-header">
+        <h2>Submitted Files List</h2>
+        <a href="/upload" class="btn btn-primary btn-sm">+ Upload Another File</a>
+      </div>
+
+      <% if (files && files.length > 0) { %>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Assignment</th>
+                <th>Submitted By</th>
+                <th>Date & Time</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th>Storage</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% files.forEach(function(file) { %>
+                <tr>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <strong><%= file.fileName %></strong>
+                    </div>
+                  </td>
+                  <td><%= file.assignmentTitle %></td>
+                  <td><%= file.studentName %></td>
+                  <td><%= file.submittedAt %></td>
+                  <td><%= file.fileSize %></td>
+                  <td>
+                    <span class="badge badge-submitted">
+                      <span class="badge-dot"></span> <%= file.status %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge badge-s3">
+                      ☁️ <%= file.storageLocation %>
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <div style="display: inline-flex; gap: 6px;">
+                      <a href="/files/view/<%= file.id %>" class="btn btn-outline btn-sm" target="_blank">
+                        View
+                      </a>
+                      <a href="/files/download/<%= file.id %>" class="btn btn-primary btn-sm">
+                        Download
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          <div class="empty-title">No submissions found</div>
+          <p class="empty-text">You haven't uploaded any assignment files yet.</p>
+          <a href="/upload" class="btn btn-primary btn-sm">Upload Your First Assignment</a>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- AWS Integration Note Banner -->
+    <div class="cloud-banner">
+      <div class="cloud-banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+        </svg>
+      </div>
+      <div class="cloud-banner-content">
+        <h4>AWS S3 Storage Pipeline</h4>
+        <p>In the final phase of this Cloud Computing mini-project, downloading and viewing files will interface with <strong>AWS S3 Object Storage</strong> via generated secure signed URLs, and will be logged to <strong>Amazon CloudWatch</strong>.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
+      <div class="footer-cloud-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        AWS Architecture Ready
+      </div>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>

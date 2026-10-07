@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Assignment Manager - Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+        </div>
+        <span>Cloud Assignment Manager</span>
+      </a>
+      
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+      
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/" class="nav-link active">Dashboard</a></li>
+        <li><a href="/assignments" class="nav-link">Assignments</a></li>
+        <li><a href="/upload" class="nav-link">Upload</a></li>
+        <li><a href="/files" class="nav-link">My Files</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    
+    <!-- Page Header -->
+    <header class="page-header">
+      <h1 class="page-title">Cloud Assignment Manager</h1>
+      <p class="page-subtitle">Simple cloud-based assignment submission system</p>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Total Assignments</div>
+          <div class="stat-value"><%= stats.total %></div>
+        </div>
+        <div class="stat-icon total">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Submitted</div>
+          <div class="stat-value"><%= stats.submitted %></div>
+        </div>
+        <div class="stat-icon submitted">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Pending</div>
+          <div class="stat-value"><%= stats.pending %></div>
+        </div>
+        <div class="stat-icon pending">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="section-title">Quick Actions</h2>
+    <div class="quick-actions-grid">
+      <a href="/assignments" class="action-card">
+        <div class="action-card-header">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          </div>
+          <h3>View Assignments</h3>
+        </div>
+        <p>Browse active course assignments, deadlines, and current submission statuses.</p>
+        <span class="action-link">Explore Assignments →</span>
+      </a>
+
+      <a href="/upload" class="action-card">
+        <div class="action-card-header">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h3>Upload Assignment</h3>
+        </div>
+        <p>Submit your completed assignment documents directly for cloud processing.</p>
+        <span class="action-link">Submit File →</span>
+      </a>
+
+      <a href="/files" class="action-card">
+        <div class="action-card-header">
+          <div class="action-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+              <polyline points="13 2 13 9 20 9"/>
+            </svg>
+          </div>
+          <h3>My Files</h3>
+        </div>
+        <p>Review previously submitted documents and download copies for records.</p>
+        <span class="action-link">View Submitted Files →</span>
+      </a>
+    </div>
+
+    <!-- Cloud / AWS Information Section -->
+    <div class="cloud-banner">
+      <div class="cloud-banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+        </svg>
+      </div>
+      <div class="cloud-banner-content">
+        <h4>
+          Cloud Storage
+          <span class="badge-aws">AWS Deployment Target</span>
+        </h4>
+        <p>Assignments are designed to be securely stored in Amazon S3. In the full AWS deployment phase, this system integrates EC2 server hosting, IAM role policies, CloudWatch monitoring, and automated notifications via Amazon SNS.</p>
+      </div>
+    </div>
+
+    <!-- Recent Overview Table -->
+    <div class="card-table-container">
+      <div class="table-header">
+        <h2>Upcoming Deadlines</h2>
+        <a href="/assignments" class="btn btn-outline btn-sm">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Assignment</th>
+              <th>Subject</th>
+              <th>Deadline</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recentAssignments.forEach(function(item) { %>
+              <tr>
+                <td><strong><%= item.title %></strong></td>
+                <td><%= item.subject %></td>
+                <td><%= item.deadline %></td>
+                <td>
+                  <% if (item.status === 'Submitted') { %>
+                    <span class="badge badge-submitted"><span class="badge-dot"></span> Submitted</span>
+                  <% } else { %>
+                    <span class="badge badge-pending"><span class="badge-dot"></span> Pending</span>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (item.status === 'Submitted') { %>
+                    <a href="/files" class="btn btn-outline btn-sm">View Submission</a>
+                  <% } else { %>
+                    <a href="/upload?assignmentId=<%= item.id %>" class="btn btn-primary btn-sm">Submit Now</a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
+      <div class="footer-cloud-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        AWS Architecture Ready
+      </div>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>

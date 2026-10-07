@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Assignment Manager - Assignments</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+        </div>
+        <span>Cloud Assignment Manager</span>
+      </a>
+      
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+      
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/" class="nav-link">Dashboard</a></li>
+        <li><a href="/assignments" class="nav-link active">Assignments</a></li>
+        <li><a href="/upload" class="nav-link">Upload</a></li>
+        <li><a href="/files" class="nav-link">My Files</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+    
+    <!-- Page Header -->
+    <header class="page-header">
+      <h1 class="page-title">Course Assignments</h1>
+      <p class="page-subtitle">View and manage your academic submissions for the semester</p>
+    </header>
+
+    <!-- Assignments Table Card -->
+    <div class="card-table-container">
+      <div class="table-header">
+        <h2>Active Assignments List</h2>
+        <a href="/upload" class="btn btn-primary btn-sm">+ Upload New Submission</a>
+      </div>
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Assignment</th>
+              <th>Subject</th>
+              <th>Course Code</th>
+              <th>Deadline</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% assignments.forEach(function(item) { %>
+              <tr>
+                <td>
+                  <strong><%= item.title %></strong>
+                  <div style="font-size: 0.8rem; color: var(--slate-600); margin-top: 3px;">
+                    <%= item.description %>
+                  </div>
+                </td>
+                <td><%= item.subject %></td>
+                <td><span style="background: var(--slate-100); padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; color: var(--slate-700);"><%= item.code %></span></td>
+                <td><%= item.deadline %></td>
+                <td>
+                  <% if (item.status === 'Submitted') { %>
+                    <span class="badge badge-submitted">
+                      <span class="badge-dot"></span> Submitted
+                    </span>
+                  <% } else { %>
+                    <span class="badge badge-pending">
+                      <span class="badge-dot"></span> Pending
+                    </span>
+                  <% } %>
+                </td>
+                <td style="text-align: right;">
+                  <% if (item.status === 'Submitted') { %>
+                    <a href="/files" class="btn btn-outline btn-sm">View Files</a>
+                  <% } else { %>
+                    <a href="/upload?assignmentId=<%= item.id %>" class="btn btn-primary btn-sm">Submit Assignment</a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AWS Integration Note Banner -->
+    <div class="cloud-banner">
+      <div class="cloud-banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+      <div class="cloud-banner-content">
+        <h4>Submission Workflow & Cloud Target</h4>
+        <p>When you click <strong>Submit Assignment</strong>, files submitted through this interface are prepared for secure object ingestion into <strong>Amazon S3</strong> buckets, with metadata indexed for student querying.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
+      <div class="footer-cloud-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        AWS Architecture Ready
+      </div>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>

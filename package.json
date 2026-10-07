@@ -1,0 +1,25 @@
+{
+  "name": "cloud-assignment-manager",
+  "version": "1.0.0",
+  "description": "Simple Cloud-Based Assignment Management System for AWS Deployment Mini Project",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "keywords": [
+    "cloud-computing",
+    "aws",
+    "assignment-manager",
+    "express",
+    "ejs",
+    "mini-project"
+  ],
+  "author": "Raj Bhokare",
+  "license": "ISC",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
