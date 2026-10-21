@@ -141,10 +141,21 @@
       </div>
       <div class="cloud-banner-content">
         <h4>
-          Cloud Storage
-          <span class="badge-aws">AWS Deployment Target</span>
+          AWS Cloud Architecture
+          <% if (cloudStatus.isS3Active) { %>
+            <span class="badge-aws" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">
+              ● Amazon S3 Connected
+            </span>
+          <% } else { %>
+            <span class="badge-aws">EC2 + S3 Ready</span>
+          <% } %>
         </h4>
-        <p>Assignments are designed to be securely stored in Amazon S3. In the full AWS deployment phase, this system integrates EC2 server hosting, IAM role policies, CloudWatch monitoring, and automated notifications via Amazon SNS.</p>
+        <p>
+          Compute: <strong>Amazon EC2</strong> (Ubuntu Linux, <%= cloudStatus.region %>) &bull; 
+          Storage: <strong><%= cloudStatus.isS3Active ? 'Amazon S3 (' + cloudStatus.bucketName + ')' : 'Amazon S3 Object Storage' %></strong> &bull; 
+          Security: <strong>AWS IAM (<%= cloudStatus.iamRole %>)</strong> &bull; 
+          Monitoring: <strong>Amazon CloudWatch &amp; SNS</strong>
+        </p>
       </div>
     </div>
 
@@ -200,7 +211,7 @@
       <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
       <div class="footer-cloud-tag">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-        AWS Architecture Ready
+        AWS Architecture: EC2 + S3 + IAM + CloudWatch
       </div>
     </div>
   </footer>

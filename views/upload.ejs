@@ -37,7 +37,7 @@
     <!-- Page Header -->
     <header class="page-header" style="text-align: center; max-width: 680px; margin: 0 auto;">
       <h1 class="page-title">Upload Assignment</h1>
-      <p class="page-subtitle">Submit your document for academic grading and cloud archiving</p>
+      <p class="page-subtitle">Submit your document for academic grading and secure Amazon S3 cloud archiving</p>
     </header>
 
     <!-- Upload Card -->
@@ -120,6 +120,8 @@
             <span class="format-pill">DOCX</span>
             <span class="format-pill">PPT</span>
             <span class="format-pill">PPTX</span>
+            <span class="format-pill">TXT</span>
+            <span class="format-pill">ZIP</span>
           </div>
         </div>
 
@@ -131,7 +133,7 @@
 
       </form>
 
-      <!-- Clearly Visible AWS Future Integration Note -->
+      <!-- Cloud Architecture Note Box -->
       <div class="aws-note-box">
         <div class="aws-note-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -139,9 +141,19 @@
           </svg>
         </div>
         <div>
-          <div class="aws-note-title">AWS Integration Coming Next</div>
+          <div class="aws-note-title">
+            <% if (cloudStatus.isS3Active) { %>
+              <span style="color: #10b981;">✔ Amazon S3 Cloud Storage Active</span>
+            <% } else { %>
+              Amazon S3 Cloud Architecture
+            <% } %>
+          </div>
           <div class="aws-note-desc">
-            In the final cloud deployment, uploaded files will be stored securely in <strong>Amazon S3</strong> with server-side encryption and presigned URLs.
+            <% if (cloudStatus.isS3Active) { %>
+              Uploaded documents are streamed directly to Amazon S3 bucket <strong><%= cloudStatus.bucketName %></strong> (<%= cloudStatus.region %>) with AES-256 Server-Side Encryption and IAM role authentication.
+            <% } else { %>
+              Running in local staging mode. When deployed on the EC2 instance with <strong><%= cloudStatus.iamRole %></strong>, uploads stream directly to private Amazon S3 object storage.
+            <% } %>
           </div>
         </div>
       </div>
@@ -156,7 +168,7 @@
       <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
       <div class="footer-cloud-tag">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-        AWS Architecture Ready
+        AWS Architecture: EC2 + S3 + IAM + CloudWatch
       </div>
     </div>
   </footer>

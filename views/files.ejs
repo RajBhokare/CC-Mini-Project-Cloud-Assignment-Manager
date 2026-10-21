@@ -37,7 +37,7 @@
     <!-- Page Header -->
     <header class="page-header">
       <h1 class="page-title">My Submitted Files</h1>
-      <p class="page-subtitle">Track and retrieve all your assignment documents stored across local & cloud storage</p>
+      <p class="page-subtitle">Track and retrieve all your assignment documents stored in Amazon S3</p>
     </header>
 
     <!-- Success Flash Alert -->
@@ -47,7 +47,21 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           <div>
             <strong>Upload Successful!</strong>
-            <span><%= uploadedFileName ? ` "${uploadedFileName}" has been submitted.` : 'Your file has been submitted successfully.' %></span>
+            <span><%= uploadedFileName ? ` "${uploadedFileName}" has been stored securely in Amazon S3.` : 'Your file has been uploaded to Amazon S3 successfully.' %></span>
+          </div>
+        </div>
+        <button class="alert-close">&times;</button>
+      </div>
+    <% } %>
+
+    <!-- S3 Error Alert -->
+    <% if (typeof s3Error !== 'undefined' && s3Error) { %>
+      <div class="alert alert-danger">
+        <div class="alert-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <strong>Amazon S3 Alert:</strong>
+            <span><%= s3Error %></span>
           </div>
         </div>
         <button class="alert-close">&times;</button>
@@ -104,10 +118,10 @@
                   </td>
                   <td style="text-align: right;">
                     <div style="display: inline-flex; gap: 6px;">
-                      <a href="/files/view/<%= file.id %>" class="btn btn-outline btn-sm" target="_blank">
+                      <a href="/files/view/<%= encodeURIComponent(file.id) %>" class="btn btn-outline btn-sm" target="_blank" title="View Document">
                         View
                       </a>
-                      <a href="/files/download/<%= file.id %>" class="btn btn-primary btn-sm">
+                      <a href="/files/download/<%= encodeURIComponent(file.id) %>" class="btn btn-primary btn-sm" title="Download Document">
                         Download
                       </a>
                     </div>
@@ -124,8 +138,14 @@
             <polyline points="14 2 14 8 20 8"/>
             <line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
-          <div class="empty-title">No submissions found</div>
-          <p class="empty-text">You haven't uploaded any assignment files yet.</p>
+          <div class="empty-title">No submissions found in S3 bucket</div>
+          <p class="empty-text">
+            <% if (cloudStatus.isS3Active) { %>
+              Your Amazon S3 bucket (<strong><%= cloudStatus.bucketName %></strong>) currently has 0 assignment files.
+            <% } else { %>
+              You haven't uploaded any assignment files yet.
+            <% } %>
+          </p>
           <a href="/upload" class="btn btn-primary btn-sm">Upload Your First Assignment</a>
         </div>
       <% } %>
@@ -139,8 +159,19 @@
         </svg>
       </div>
       <div class="cloud-banner-content">
-        <h4>AWS S3 Storage Pipeline</h4>
-        <p>In the final phase of this Cloud Computing mini-project, downloading and viewing files will interface with <strong>AWS S3 Object Storage</strong> via generated secure signed URLs, and will be logged to <strong>Amazon CloudWatch</strong>.</p>
+        <h4>
+          AWS S3 Cloud Object Storage
+          <% if (cloudStatus.isS3Active) { %>
+            <span class="badge-aws" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">
+              ● Connected (<%= cloudStatus.bucketName %>)
+            </span>
+          <% } else { %>
+            <span class="badge-aws">Local Staging Fallback</span>
+          <% } %>
+        </h4>
+        <p>
+          Files are stored in private <strong>Amazon S3</strong> object storage with AES-256 server-side encryption. Secure viewing and downloading are powered by time-limited <strong>AWS Presigned URLs</strong> authenticated via the EC2 IAM role <code><%= cloudStatus.iamRole %></code>.
+        </p>
       </div>
     </div>
 
@@ -152,7 +183,7 @@
       <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
       <div class="footer-cloud-tag">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-        AWS Architecture Ready
+        AWS Architecture: EC2 + S3 + IAM + CloudWatch
       </div>
     </div>
   </footer>

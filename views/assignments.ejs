@@ -103,8 +103,8 @@
         </svg>
       </div>
       <div class="cloud-banner-content">
-        <h4>Submission Workflow & Cloud Target</h4>
-        <p>When you click <strong>Submit Assignment</strong>, files submitted through this interface are prepared for secure object ingestion into <strong>Amazon S3</strong> buckets, with metadata indexed for student querying.</p>
+        <h4>Submission Workflow &amp; Cloud Target</h4>
+        <p>When you submit an assignment, your document is ingested into private <strong>Amazon S3</strong> object storage with AES-256 server-side encryption. Server permissions are governed by the EC2 IAM role <code><%= cloudStatus.iamRole %></code>.</p>
       </div>
     </div>
 
@@ -116,7 +116,7 @@
       <div>© 2026 Cloud Assignment Manager • CC Mini Project</div>
       <div class="footer-cloud-tag">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-        AWS Architecture Ready
+        AWS Architecture: EC2 + S3 + IAM + CloudWatch
       </div>
     </div>
   </footer>

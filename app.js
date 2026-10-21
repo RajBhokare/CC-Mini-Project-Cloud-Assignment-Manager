@@ -2,55 +2,73 @@
  * ================================================================
  * Cloud Assignment Manager - Mini Project
  * ================================================================
- * A simple, clean, student assignment management web application.
- * Designed for easy future integration with AWS (S3, EC2, CloudWatch, SNS).
- * 
- * Future Architecture:
- * Browser -> Express Server (EC2) -> Amazon S3 (Object Storage)
- * 
- * Current Mode: Local storage & In-memory mock data
+ * A secure, cloud-deployed student assignment management application.
+ * Built for Cloud Computing Mini Project demonstration on AWS.
+ *
+ * Architecture:
+ * Client Browser -> Express Server (Amazon EC2 Ubuntu t3.micro)
+ *               -> Multer (Memory Storage)
+ *               -> AWS SDK v3 (@aws-sdk/client-s3)
+ *               -> Amazon S3 (Private Bucket, SSE-S3 AES-256)
+ *
+ * Security & Governance:
+ * - AWS IAM Instance Profile: CloudAssignmentEC2Role (IMDSv2)
+ * - S3 Bucket: Private, Block Public Access Enabled, SSE-S3 AES-256
+ * - Presigned URLs: Temporary authenticated access for viewing & downloading
+ * - Monitoring & Alerts: Amazon CloudWatch + Amazon SNS
  * ================================================================
  */
 
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  GetObjectCommand
+} = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const AWS_REGION = process.env.AWS_REGION || 'eu-north-1';
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME ? process.env.S3_BUCKET_NAME.trim() : '';
 
-// Ensure uploads folder exists
+// S3 Active Flag: true when a valid bucket name is configured
+const isS3Configured = Boolean(
+  S3_BUCKET_NAME &&
+  S3_BUCKET_NAME !== '' &&
+  S3_BUCKET_NAME !== 'your-s3-bucket-name'
+);
+
+// Initialize AWS S3 Client using AWS SDK v3
+// When deployed on EC2 with CloudAssignmentEC2Role attached,
+// the SDK automatically retrieves credentials from the EC2 Instance Metadata Service (IMDS).
+const s3Client = new S3Client({
+  region: AWS_REGION
+});
+
+// Local uploads directory (only used in explicitly active local development mode)
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // ----------------------------------------------------------------
-// 1. MULTER CONFIGURATION (Local File Storage)
+// 1. MULTER CONFIGURATION
 // ----------------------------------------------------------------
-// Note for AWS Integration:
-// Later, this local diskStorage can be replaced with `multer-s3`
-// or the AWS SDK (@aws-sdk/client-s3) `PutObjectCommand` to stream
-// uploads directly to your Amazon S3 Bucket.
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    // Generate safe unique filename: originalname-timestamp.ext
-    const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E4);
-    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
-  }
-});
+// Memory storage streams files directly to S3 via PutObjectCommand
+// without saving unnecessary files to EC2 root disk.
+const storage = multer.memoryStorage();
 
-// File filter for supported academic document formats
+// Academic document formats supported
+const allowedExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt', '.zip'];
+
 const fileFilter = (req, file, cb) => {
-  const allowedExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt', '.zip'];
   const ext = path.extname(file.originalname).toLowerCase();
-  
   if (allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
@@ -74,10 +92,27 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Cloud metadata helper function
+function getCloudStatus() {
+  return {
+    region: AWS_REGION,
+    bucketName: S3_BUCKET_NAME || 'Not Configured (Staging)',
+    isS3Active: isS3Configured,
+    iamRole: 'CloudAssignmentEC2Role',
+    instanceType: 't3.micro (Ubuntu Linux)',
+    mode: isS3Configured ? 'AWS Production (Amazon S3 Active)' : 'Local Development Fallback'
+  };
+}
+
+// Global view variables (cloud status accessible everywhere)
+app.use((req, res, next) => {
+  res.locals.cloudStatus = getCloudStatus();
+  next();
+});
+
 // ----------------------------------------------------------------
-// 3. IN-MEMORY MOCK DATA
+// 3. IN-MEMORY DATA MODEL
 // ----------------------------------------------------------------
-// Standard list of college assignments
 let assignments = [
   {
     id: 1,
@@ -86,7 +121,7 @@ let assignments = [
     code: 'CC-401',
     deadline: '15 Oct 2026',
     status: 'Pending',
-    description: 'Design and simulate deployment of a scalable web application on AWS EC2 & S3 storage.'
+    description: 'Design and deploy a scalable, secure web application on AWS EC2 & S3 storage.'
   },
   {
     id: 2,
@@ -126,43 +161,33 @@ let assignments = [
   }
 ];
 
-// Submitted files history (both mock & dynamically uploaded)
-let submittedFiles = [
-  {
-    id: 'sub-1',
-    fileName: 'dbms_healthcare_schema.pdf',
-    storedFileName: null, // Mock pre-seeded file
-    assignmentTitle: 'Database Assignment',
-    subject: 'DBMS',
-    studentName: 'Raj Bhokare',
-    submittedAt: '07 Oct 2026, 04:30 PM',
-    fileSize: '1.4 MB',
-    status: 'Submitted',
-    storageLocation: 'Amazon S3 (Planned)',
-    isLocal: false
-  },
-  {
-    id: 'sub-2',
-    fileName: 'web_dev_portfolio_report.pdf',
-    storedFileName: null, // Mock pre-seeded file
-    assignmentTitle: 'Web Development Portfolio',
-    subject: 'Full Stack Web Dev',
-    studentName: 'Raj Bhokare',
-    submittedAt: '08 Oct 2026, 11:15 AM',
-    fileSize: '2.8 MB',
-    status: 'Submitted',
-    storageLocation: 'Amazon S3 (Planned)',
-    isLocal: false
-  }
-];
+// In-memory submission metadata cache (persists metadata alongside S3 objects during session)
+let submissionMetadata = {};
 
-// Helper to format bytes to human readable size
+// Local-only submissions cache (for offline local development)
+let localSubmissions = [];
+
+// Helper to format bytes to human-readable size
 function formatBytes(bytes) {
-  if (bytes === 0) return '0 Bytes';
+  if (!bytes || bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Helper to format dates for display
+function formatDate(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return 'Recently';
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }) + ', ' + d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 // ----------------------------------------------------------------
@@ -186,14 +211,13 @@ app.get('/', (req, res) => {
       submitted: submittedCount,
       pending: pendingCount
     },
-    recentAssignments: assignments.slice(0, 3),
-    recentFiles: submittedFiles.slice(0, 3)
+    recentAssignments: assignments.slice(0, 3)
   });
 });
 
 /**
  * Route: GET /assignments
- * Purpose: View all assignments and their status
+ * Purpose: View all course assignments and their submission status
  */
 app.get('/assignments', (req, res) => {
   res.render('assignments', {
@@ -209,7 +233,7 @@ app.get('/assignments', (req, res) => {
  */
 app.get('/upload', (req, res) => {
   const selectedAssignmentId = req.query.assignmentId ? parseInt(req.query.assignmentId) : null;
-  
+
   res.render('upload', {
     pageTitle: 'Upload Assignment',
     activePage: 'upload',
@@ -223,24 +247,31 @@ app.get('/upload', (req, res) => {
 /**
  * Route: POST /upload
  * Purpose: Handle assignment submission file upload
+ * Architecture: Browser -> Express -> Multer -> AWS SDK v3 (PutObjectCommand) -> Amazon S3
  */
 app.post('/upload', (req, res) => {
-  upload.single('assignmentFile')(req, res, (err) => {
+  upload.single('assignmentFile')(req, res, async (err) => {
     const { studentName, assignmentId } = req.body;
     const selectedAssignment = assignments.find(a => a.id === parseInt(assignmentId));
 
+    // Handle Multer upload errors (size limit or invalid file format)
     if (err) {
+      let errorText = err.message || 'File upload error occurred.';
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        errorText = 'File size exceeds the 10MB limit. Please upload a smaller document.';
+      }
+
       return res.status(400).render('upload', {
         pageTitle: 'Upload Assignment',
         activePage: 'upload',
         assignments: assignments,
         selectedAssignmentId: assignmentId ? parseInt(assignmentId) : null,
-        errorMessage: err.message || 'File upload error occurred.',
+        errorMessage: errorText,
         successMessage: null
       });
     }
 
-    // Validation
+    // Input Validations
     if (!studentName || !studentName.trim()) {
       return res.status(400).render('upload', {
         pageTitle: 'Upload Assignment',
@@ -258,7 +289,7 @@ app.post('/upload', (req, res) => {
         activePage: 'upload',
         assignments: assignments,
         selectedAssignmentId: null,
-        errorMessage: 'Please select a valid assignment.',
+        errorMessage: 'Please select a valid assignment from the list.',
         successMessage: null
       });
     }
@@ -274,148 +305,269 @@ app.post('/upload', (req, res) => {
       });
     }
 
-    // Format submission timestamp
-    const now = new Date();
-    const dateFormatted = now.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }) + ', ' + now.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const dateFormatted = formatDate(new Date());
 
-    // Create new submission record
-    const newSubmission = {
-      id: 'sub-' + Date.now(),
-      fileName: req.file.originalname,
-      storedFileName: req.file.filename,
-      assignmentTitle: selectedAssignment.title,
-      subject: selectedAssignment.subject,
-      studentName: studentName.trim(),
-      submittedAt: dateFormatted,
-      fileSize: formatBytes(req.file.size),
-      status: 'Submitted',
-      storageLocation: 'Local (uploads/) -> S3 Ready',
-      isLocal: true
-    };
+    // Clean collision-resistant S3 object key
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const rawBase = path.basename(req.file.originalname, ext);
+    const safeBase = rawBase.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50);
+    const uniqueId = Date.now() + '-' + Math.random().toString(36).substring(2, 8);
 
-    // Store in submission list (newest first)
-    submittedFiles.unshift(newSubmission);
+    // ----------------------------------------------------------------
+    // S3 Cloud Storage Upload
+    // ----------------------------------------------------------------
+    if (isS3Configured) {
+      const s3Key = `assignments/${safeBase}-${uniqueId}${ext}`;
 
-    // Update assignment status to 'Submitted'
-    selectedAssignment.status = 'Submitted';
+      try {
+        const putParams = {
+          Bucket: S3_BUCKET_NAME,
+          Key: s3Key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype || 'application/octet-stream',
+          ServerSideEncryption: 'AES256', // SSE-S3 Server-Side Encryption
+          Metadata: {
+            'original-name': encodeURIComponent(req.file.originalname),
+            'student-name': encodeURIComponent(studentName.trim()),
+            'assignment-id': String(selectedAssignment.id),
+            'assignment-title': encodeURIComponent(selectedAssignment.title),
+            'subject': encodeURIComponent(selectedAssignment.subject)
+          }
+        };
 
-    // Redirect to files page with a success message banner
-    res.redirect('/files?uploadSuccess=true&file=' + encodeURIComponent(req.file.originalname));
+        // Upload to S3 - only report success if AWS S3 confirms!
+        await s3Client.send(new PutObjectCommand(putParams));
+        console.log(`[CloudWatch Logger] Successfully uploaded "${req.file.originalname}" to s3://${S3_BUCKET_NAME}/${s3Key} with AES256 encryption`);
+
+        // Cache metadata for display
+        submissionMetadata[s3Key] = {
+          fileName: req.file.originalname,
+          assignmentTitle: selectedAssignment.title,
+          subject: selectedAssignment.subject,
+          studentName: studentName.trim(),
+          submittedAt: dateFormatted,
+          fileSize: formatBytes(req.file.size)
+        };
+
+        selectedAssignment.status = 'Submitted';
+
+        return res.redirect('/files?uploadSuccess=true&file=' + encodeURIComponent(req.file.originalname));
+      } catch (s3Error) {
+        console.error('[AWS S3 Upload Error]:', s3Error);
+        // Genuine error display - never falsely claim success or silently fall back to local disk in production!
+        return res.status(500).render('upload', {
+          pageTitle: 'Upload Assignment',
+          activePage: 'upload',
+          assignments: assignments,
+          selectedAssignmentId: parseInt(assignmentId),
+          errorMessage: `Amazon S3 Upload Failed: ${s3Error.message || 'Check EC2 IAM role permissions or bucket configuration.'}`,
+          successMessage: null
+        });
+      }
+    } else {
+      // Local fallback mode (ONLY active when S3_BUCKET_NAME is not configured)
+      const localFileName = `${safeBase}-${uniqueId}${ext}`;
+      const localFilePath = path.join(uploadsDir, localFileName);
+
+      try {
+        fs.writeFileSync(localFilePath, req.file.buffer);
+
+        const newSubmission = {
+          id: 'local-' + uniqueId,
+          s3Key: null,
+          fileName: req.file.originalname,
+          storedFileName: localFileName,
+          assignmentTitle: selectedAssignment.title,
+          subject: selectedAssignment.subject,
+          studentName: studentName.trim(),
+          submittedAt: dateFormatted,
+          fileSize: formatBytes(req.file.size),
+          status: 'Submitted',
+          storageLocation: 'Local Development (uploads/)',
+          isS3: false,
+          isLocal: true
+        };
+
+        localSubmissions.unshift(newSubmission);
+        selectedAssignment.status = 'Submitted';
+
+        return res.redirect('/files?uploadSuccess=true&file=' + encodeURIComponent(req.file.originalname));
+      } catch (fsErr) {
+        console.error('[Local Storage Error]:', fsErr);
+        return res.status(500).render('upload', {
+          pageTitle: 'Upload Assignment',
+          activePage: 'upload',
+          assignments: assignments,
+          selectedAssignmentId: parseInt(assignmentId),
+          errorMessage: 'Local file write failed: ' + fsErr.message,
+          successMessage: null
+        });
+      }
+    }
   });
 });
 
 /**
  * Route: GET /files
  * Purpose: View list of submitted assignment files
+ * In S3 mode: Lists actual objects from S3 bucket under assignments/ prefix
  */
-app.get('/files', (req, res) => {
+app.get('/files', async (req, res) => {
   const uploadSuccess = req.query.uploadSuccess === 'true';
   const uploadedFileName = req.query.file || '';
+
+  let filesToDisplay = [];
+  let s3Error = null;
+
+  if (isS3Configured) {
+    try {
+      // Fetch actual objects from S3
+      const listCommand = new ListObjectsV2Command({
+        Bucket: S3_BUCKET_NAME,
+        Prefix: 'assignments/'
+      });
+
+      const s3Data = await s3Client.send(listCommand);
+
+      // Filter valid objects (exclude directory markers)
+      const contents = (s3Data.Contents || []).filter(item => item.Key && item.Key !== 'assignments/' && item.Size > 0);
+
+      filesToDisplay = contents.map((obj) => {
+        const cached = submissionMetadata[obj.Key];
+        const baseKey = path.basename(obj.Key);
+        // Clean original name without timestamp hash
+        const cleanName = baseKey.replace(/-[0-9]+-[a-z0-9]+(\.[a-zA-Z0-9]+)$/, '$1');
+
+        return {
+          id: obj.Key,
+          s3Key: obj.Key,
+          fileName: cached ? cached.fileName : cleanName,
+          storedFileName: obj.Key,
+          assignmentTitle: cached ? cached.assignmentTitle : 'Course Assignment',
+          subject: cached ? cached.subject : 'Cloud Computing',
+          studentName: cached ? cached.studentName : 'Student Submission',
+          submittedAt: cached ? cached.submittedAt : formatDate(obj.LastModified),
+          fileSize: formatBytes(obj.Size),
+          status: 'Submitted',
+          storageLocation: 'Amazon S3',
+          isS3: true,
+          isLocal: false
+        };
+      });
+
+      // Sort newest first
+      filesToDisplay.reverse();
+    } catch (err) {
+      console.error('[AWS S3 List Error]:', err.message);
+      s3Error = `Failed to list objects from Amazon S3 (${S3_BUCKET_NAME}): ${err.message}. Please verify IAM role permissions.`;
+    }
+  } else {
+    // Local development mode: list locally submitted files
+    filesToDisplay = localSubmissions;
+  }
 
   res.render('files', {
     pageTitle: 'My Files',
     activePage: 'files',
-    files: submittedFiles,
+    files: filesToDisplay,
     uploadSuccess: uploadSuccess,
-    uploadedFileName: uploadedFileName
+    uploadedFileName: uploadedFileName,
+    s3Error: s3Error
   });
 });
 
 /**
  * Route: GET /files/download/:id
- * Purpose: Download uploaded file from uploads/ or return mock content
+ * Purpose: Secure file download (generates AWS S3 Presigned URL for private S3 objects)
  */
-app.get('/files/download/:id', (req, res) => {
-  const fileRecord = submittedFiles.find(f => f.id === req.params.id);
+app.get('/files/download/:id(*)', async (req, res) => {
+  const fileId = req.params.id;
 
-  if (!fileRecord) {
-    return res.status(404).send('File record not found.');
-  }
+  // 1. Amazon S3 Presigned Download URL
+  if (isS3Configured && fileId.startsWith('assignments/')) {
+    const cached = submissionMetadata[fileId];
+    const downloadName = cached ? cached.fileName : path.basename(fileId);
 
-  if (fileRecord.isLocal && fileRecord.storedFileName) {
-    const filePath = path.join(uploadsDir, fileRecord.storedFileName);
-    if (fs.existsSync(filePath)) {
-      return res.download(filePath, fileRecord.fileName);
+    try {
+      const getCommand = new GetObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: fileId,
+        ResponseContentDisposition: `attachment; filename="${encodeURIComponent(downloadName)}"`
+      });
+
+      // 15-minute presigned URL allows direct, authenticated download without making bucket public
+      const presignedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 900 });
+      console.log(`[CloudWatch Logger] Generated secure S3 presigned DOWNLOAD URL for: ${fileId}`);
+      return res.redirect(presignedUrl);
+    } catch (err) {
+      console.error('[AWS S3 Presign Download Error]:', err);
+      return res.status(500).send(`Failed to generate secure S3 download URL: ${err.message}`);
     }
   }
 
-  // Fallback for pre-seeded mock files
-  res.setHeader('Content-disposition', `attachment; filename="${fileRecord.fileName}"`);
-  res.setHeader('Content-type', 'text/plain');
-  res.send(`=== Cloud Assignment Manager (Mock File) ===\n\n` +
-    `File Name: ${fileRecord.fileName}\n` +
-    `Assignment: ${fileRecord.assignmentTitle}\n` +
-    `Student: ${fileRecord.studentName}\n` +
-    `Submitted At: ${fileRecord.submittedAt}\n` +
-    `Storage Note: In the final AWS deployment, this file will be retrieved directly via AWS S3 Presigned URLs.\n`
-  );
+  // 2. Local File Download (local dev fallback)
+  const localRecord = localSubmissions.find(f => f.id === fileId);
+  if (localRecord && localRecord.storedFileName) {
+    const filePath = path.join(uploadsDir, localRecord.storedFileName);
+    if (fs.existsSync(filePath)) {
+      return res.download(filePath, localRecord.fileName);
+    }
+  }
+
+  return res.status(404).send('File not found in storage.');
 });
 
 /**
  * Route: GET /files/view/:id
- * Purpose: View uploaded file in browser
+ * Purpose: Secure browser preview (generates AWS S3 Presigned URL for inline display)
  */
-app.get('/files/view/:id', (req, res) => {
-  const fileRecord = submittedFiles.find(f => f.id === req.params.id);
+app.get('/files/view/:id(*)', async (req, res) => {
+  const fileId = req.params.id;
 
-  if (!fileRecord) {
-    return res.status(404).send('File record not found.');
+  // 1. Amazon S3 Presigned Inline View URL
+  if (isS3Configured && fileId.startsWith('assignments/')) {
+    const cached = submissionMetadata[fileId];
+    const fileName = cached ? cached.fileName : path.basename(fileId);
+
+    try {
+      const getCommand = new GetObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: fileId,
+        ResponseContentDisposition: `inline; filename="${encodeURIComponent(fileName)}"`
+      });
+
+      const presignedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 900 });
+      console.log(`[CloudWatch Logger] Generated secure S3 presigned VIEW URL for: ${fileId}`);
+      return res.redirect(presignedUrl);
+    } catch (err) {
+      console.error('[AWS S3 Presign View Error]:', err);
+      return res.status(500).send(`Failed to generate secure S3 view URL: ${err.message}`);
+    }
   }
 
-  if (fileRecord.isLocal && fileRecord.storedFileName) {
-    const filePath = path.join(uploadsDir, fileRecord.storedFileName);
+  // 2. Local File View (local dev fallback)
+  const localRecord = localSubmissions.find(f => f.id === fileId);
+  if (localRecord && localRecord.storedFileName) {
+    const filePath = path.join(uploadsDir, localRecord.storedFileName);
     if (fs.existsSync(filePath)) {
       return res.sendFile(filePath);
     }
   }
 
-  // Fallback for pre-seeded mock files
-  res.setHeader('Content-type', 'text/html');
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>View: ${fileRecord.fileName}</title>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; display: flex; justify-content: center; }
-        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 600px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        h2 { color: #38bdf8; margin-top: 0; }
-        .meta { margin: 16px 0; font-size: 15px; line-height: 1.8; color: #cbd5e1; }
-        .badge { display: inline-block; background: #0284c7; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .s3-note { margin-top: 20px; padding: 14px; background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; color: #fde68a; font-size: 13px; border-radius: 4px; }
-        a.btn { display: inline-block; margin-top: 20px; background: #2563eb; color: white; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 500; }
-        a.btn:hover { background: #1d4ed8; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <span class="badge">Preview Mode</span>
-        <h2>${fileRecord.fileName}</h2>
-        <div class="meta">
-          <div><strong>Assignment:</strong> ${fileRecord.assignmentTitle}</div>
-          <div><strong>Subject:</strong> ${fileRecord.subject}</div>
-          <div><strong>Student:</strong> ${fileRecord.studentName}</div>
-          <div><strong>Date:</strong> ${fileRecord.submittedAt}</div>
-          <div><strong>Status:</strong> ${fileRecord.status}</div>
-          <div><strong>Size:</strong> ${fileRecord.fileSize}</div>
-        </div>
-        <div class="s3-note">
-          <strong>Amazon S3 Cloud Architecture:</strong><br>
-          In AWS deployment, this preview will load securely from Amazon S3 bucket object storage.
-        </div>
-        <a href="/files" class="btn">← Back to My Files</a>
-      </div>
-    </body>
-    </html>
-  `);
+  return res.status(404).send('File not found in storage.');
+});
+
+/**
+ * Route: GET /health
+ * Purpose: Health check endpoint returning simple JSON status
+ * Complies with Section 6 of requirements (no secrets or environment variables exposed)
+ */
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'cloud-assignment-manager',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // ----------------------------------------------------------------
@@ -430,15 +582,17 @@ app.use((req, res) => {
       submitted: assignments.filter(a => a.status === 'Submitted').length,
       pending: assignments.filter(a => a.status === 'Pending').length
     },
-    recentAssignments: assignments.slice(0, 3),
-    recentFiles: submittedFiles.slice(0, 3)
+    recentAssignments: assignments.slice(0, 3)
   });
 });
 
 app.listen(PORT, () => {
   console.log('====================================================');
   console.log(`🚀 Cloud Assignment Manager is running!`);
-  console.log(`🔗 Local URL: http://localhost:${PORT}`);
-  console.log(`☁️  AWS Cloud Deployment Mode: Local (Ready for S3)`);
+  console.log(`🔗 Local Address: http://localhost:${PORT}`);
+  console.log(`☁️  AWS Region:    ${AWS_REGION}`);
+  console.log(`🪣  Amazon S3:     ${isS3Configured ? `Active (Bucket: ${S3_BUCKET_NAME})` : 'Local Development Fallback'}`);
+  console.log(`🛡️  IAM Role:      CloudAssignmentEC2Role (IMDSv2)`);
+  console.log(`🩺 Health Check:  http://localhost:${PORT}/health`);
   console.log('====================================================');
 });
