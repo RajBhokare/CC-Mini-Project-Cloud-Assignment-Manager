@@ -24,6 +24,66 @@
 
 ---
 
+## ⚡ Quick Run Guide (For Evaluators & Collaborators)
+
+### 🚀 1. Access the Live AWS Cloud Deployment (Direct Links)
+The application is deployed on Amazon EC2 (`eu-north-1`) with Amazon S3 object storage:
+- **Dashboard:** [http://13.51.72.30:3000](http://13.51.72.30:3000)
+- **Assignments:** [http://13.51.72.30:3000/assignments](http://13.51.72.30:3000/assignments)
+- **File Upload:** [http://13.51.72.30:3000/upload](http://13.51.72.30:3000/upload)
+- **My Files:** [http://13.51.72.30:3000/files](http://13.51.72.30:3000/files)
+- **Health Check:** [http://13.51.72.30:3000/health](http://13.51.72.30:3000/health)
+
+---
+
+### ☁️ 2. Manage on AWS EC2 (SSH Commands)
+```bash
+# 1. Connect to EC2
+ssh -i "path/to/cloud-assignment-key.pem" ubuntu@13.51.72.30
+
+# 2. Check application status
+pm2 status
+
+# 3. View live logs (CloudWatch Logger & S3 uploads)
+pm2 logs cloud-assignment-manager
+
+# 4. Pull updates and restart
+cd ~/CC-Mini-Project-Cloud-Assignment-Manager
+git pull origin main
+pm2 restart cloud-assignment-manager
+
+# 5. Inspect S3 bucket objects via AWS CLI
+aws s3 ls s3://cc-assignment-manager-raj-2026/ --recursive --region eu-north-1
+```
+
+---
+
+### 💻 3. Run Locally on Any Computer (Windows / Mac / Linux)
+```bash
+# 1. Clone repository
+git clone https://github.com/RajBhokare/CC-Mini-Project-Cloud-Assignment-Manager.git
+cd CC-Mini-Project-Cloud-Assignment-Manager
+
+# 2. Install dependencies
+npm install
+
+# 3. Set environment variables (Optional: defaults to Local Staging Mode)
+cp .env.example .env
+
+# 4. Start the server
+npm start
+# Open in browser: http://localhost:3000
+```
+
+---
+
+### 🎯 4. Two-Minute Practical Exam Demonstration Guide
+1. Open **[http://13.51.72.30:3000/upload](http://13.51.72.30:3000/upload)** and upload a PDF document.
+2. Watch the green notification appear on **`/files`** displaying storage badge: `☁️ Amazon S3`.
+3. Click **View** or **Download**: Observe the secure redirect to an Amazon S3 Presigned URL.
+4. Open the AWS S3 Console (`cc-assignment-manager-raj-2026`) or run `aws s3 ls s3://cc-assignment-manager-raj-2026/assignments/` to show the file is physically stored in Amazon S3.
+5. Visit **`/health`** to show the healthy JSON status check.
+
 ## 🏗️ 2. System Architecture
 
 ### High-Level Architecture Diagram
@@ -161,7 +221,7 @@ PORT=3000
 AWS_REGION=eu-north-1
 
 # Amazon S3 Bucket Name (Private bucket created in your AWS account)
-S3_BUCKET_NAME=your-s3-bucket-name
+S3_BUCKET_NAME=cc-assignment-manager-raj-2026
 ```
 
 > [!IMPORTANT]
@@ -210,7 +270,7 @@ npm run dev
 ### Step 7.1 — Create Amazon S3 Bucket
 1. Log in to the [AWS Management Console](https://console.aws.amazon.com/) and navigate to **Amazon S3**.
 2. Click **Create bucket**.
-3. **Bucket name:** Choose a globally unique name (e.g. `cloud-assignment-manager-raj-2026`).
+3. **Bucket name:** `cc-assignment-manager-raj-2026` (or your globally unique bucket name).
 4. **AWS Region:** Select `eu-north-1` (Stockholm) to match your EC2 instance.
 5. **Object Ownership:** Keep *ACLs disabled (recommended)*.
 6. **Block Public Access settings for this bucket:** Ensure **Block *all* public access** is **CHECKED** (enabled).
@@ -240,14 +300,14 @@ npm run dev
         "s3:ListBucket"
       ],
       "Resource": [
-        "arn:aws:s3:::your-s3-bucket-name",
-        "arn:aws:s3:::your-s3-bucket-name/*"
+        "arn:aws:s3:::cc-assignment-manager-raj-2026",
+        "arn:aws:s3:::cc-assignment-manager-raj-2026/*"
       ]
     }
   ]
 }
 ```
-*(Replace `your-s3-bucket-name` with your actual S3 bucket name).*
+*(Replace `cc-assignment-manager-raj-2026` if using a different bucket name).*
 
 6. Name the policy `CloudAssignmentS3Policy` and save it.
 7. Return to the Create Role tab, refresh the policies, select `CloudAssignmentS3Policy`, and click **Next**.
@@ -316,7 +376,7 @@ npm install
 cat << 'EOF' > .env
 PORT=3000
 AWS_REGION=eu-north-1
-S3_BUCKET_NAME=your-s3-bucket-name
+S3_BUCKET_NAME=cc-assignment-manager-raj-2026
 EOF
 
 # 7. Install PM2 Process Manager for persistent background execution
